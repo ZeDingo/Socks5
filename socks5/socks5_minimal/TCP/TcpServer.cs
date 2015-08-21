@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Net.Sockets;
 using System.Net;
+using System.Net.Sockets;
 using System.Threading;
 
-namespace socks5.TCP
+namespace socks5_minimal.TCP
 {
     public class TcpServer
     {

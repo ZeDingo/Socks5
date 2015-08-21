@@ -1,16 +1,13 @@
-﻿using socks5.Plugin;
-using socks5.Socks;
-using socks5.TCP;
-using System;
-using System.Collections;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
+using Socona.Fiveocks.Plugin;
+using Socona.Fiveocks.TCP;
 
-namespace socks5
+namespace Socona.Fiveocks.Socks
 {
-    class SocksTunnel
+    class SocksTunnel : IDisposable
     {
         public SocksRequest Req;
         public SocksRequest ModifiedReq;
@@ -21,7 +18,10 @@ namespace socks5
         private List<DataHandler> Plugins = new List<DataHandler>();
 
         private int Timeout = 10000;
-        private int PacketSize = 65535;
+        private int PacketSize = 4096;
+
+        public event EventHandler TunnelDisposing;
+        private bool isDisposing;
 
         public SocksTunnel(SocksClient p, SocksRequest req, SocksRequest req1, int packetSize, int timeout)
         {
@@ -33,40 +33,31 @@ namespace socks5
             Timeout = timeout;
         }
 
-        SocketAsyncEventArgs socketArgs;
-
         public void Open()
         {
             if (ModifiedReq.Address == null || ModifiedReq.Port <= -1 || ModifiedReq.IP == null) { Client.Client.Disconnect(); return; }
 
             Console.WriteLine("Client: {0}:{1}({2})", ModifiedReq.Address, ModifiedReq.Port, ModifiedReq.IP);
-
             foreach (ConnectSocketOverrideHandler conn in PluginLoader.LoadPlugin(typeof(ConnectSocketOverrideHandler)))
-            if(conn.Enabled)
-            {
-                Client pm = conn.OnConnectOverride(ModifiedReq);
-                if (pm != null)
+                if (conn.Enabled)
                 {
-                    //check if it's connected.
-                    if (pm.Sock.Connected)
+                    Client pm = conn.OnConnectOverride(ModifiedReq);
+                    if (pm != null)
                     {
-                        RemoteClient = pm;
-                        //send request right here.
-                        byte[] shit = Req.GetData(true);
-                        shit[1] = 0x00;
-                        //gucci let's go.
-                        Client.Client.Send(shit);
-                        ConnectHandler(null);
-                        return;
+                        //check if it's connected.
+                        if (pm.Sock.Connected)
+                        {
+                            RemoteClient = pm;
+                            //send request right here.
+                            byte[] shit = Req.GetData(true);
+                            shit[1] = 0x00;
+                            //gucci let's go.
+                            Client.Client.Send(shit);
+                            ConnectHandler(null);
+                            return;
+                        }
                     }
                 }
-            }
-            if (ModifiedReq.Error != SocksError.Granted)
-            {
-                Client.Client.Send(Req.GetData(true));
-                Client.Client.Disconnect();
-                return;
-            }
             var socketArgs = new SocketAsyncEventArgs { RemoteEndPoint = new IPEndPoint(ModifiedReq.IP, ModifiedReq.Port) };
             socketArgs.Completed += socketArgs_Completed;
             RemoteClient.Sock = new Socket(SocketType.Stream, ProtocolType.Tcp);
@@ -79,7 +70,6 @@ namespace socks5
 
         void socketArgs_Completed(object sender, SocketAsyncEventArgs e)
         {
-            
             byte[] request = Req.GetData(true); // Client.Client.Send(Req.GetData());
             if (e.SocketError != SocketError.Success)
             {
@@ -93,23 +83,21 @@ namespace socks5
 
             Client.Client.Send(request);
 
-            if(socketArgs != null)
-            {
-                socketArgs.Completed -= socketArgs_Completed;
-                socketArgs.Dispose();
-            }
-
             switch (e.LastOperation)
             {
                 case SocketAsyncOperation.Connect:
                     //connected;
                     ConnectHandler(e);
-                    break;               
+                    break;
             }
         }
 
         private void ConnectHandler(SocketAsyncEventArgs e)
         {
+#if DEBUG
+            //Console.WriteLine(string.Format("Tunnel:  \t\r\nClient:{0} -> {1};  \t\r\n Remote:{2} -> {3}", Client.Client.Sock.RemoteEndPoint,
+            //    Client.Client.Sock.LocalEndPoint, RemoteClient.Sock.LocalEndPoint, RemoteClient.Sock.RemoteEndPoint));
+#endif
             //start receiving from both endpoints.
             try
             {
@@ -118,68 +106,93 @@ namespace socks5
                     Plugins.Push(data);
                 Client.Client.onDataReceived += Client_onDataReceived;
                 RemoteClient.onDataReceived += RemoteClient_onDataReceived;
-                RemoteClient.onClientDisconnected += RemoteClient_onClientDisconnected;
-                Client.Client.onClientDisconnected += Client_onClientDisconnected;
-                RemoteClient.ReceiveAsync();
-                Client.Client.ReceiveAsync();
+                RemoteClient.ClientDisconnecting += RemoteClientClientDisconnecting;
+                Client.Client.ClientDisconnecting += ClientClientDisconnecting;
+                RemoteClient.ReceiveAsyncNew();
+                Client.Client.ReceiveAsyncNew();
             }
-            catch
+            catch (SocketException ex)
             {
-                RemoteClient.Disconnect();
-                Client.Client.Disconnect();
+                OnTunnelDisposing();
             }
         }
         bool disconnected = false;
-        void Client_onClientDisconnected(object sender, ClientEventArgs e)
+        void ClientClientDisconnecting(object sender, ClientEventArgs e)
         {
             if (disconnected) return;
-            //Console.WriteLine("Client DC'd");
+
+            Console.WriteLine("local DC'd @" + Client.Client.Sock.RemoteEndPoint);
+
             disconnected = true;
-            RemoteClient.Disconnect();
-            RemoteClient.onDataReceived -= RemoteClient_onDataReceived;
-            RemoteClient.onClientDisconnected -= RemoteClient_onClientDisconnected;
+            // RemoteClient.Disconnect();
+            OnTunnelDisposing();
         }
 
-        void RemoteClient_onClientDisconnected(object sender, ClientEventArgs e)
+        void RemoteClientClientDisconnecting(object sender, ClientEventArgs e)
         {
-            
             if (disconnected) return;
 
-            Console.WriteLine("\tRemote DC'd @" + RemoteClient.Sock.RemoteEndPoint);
 
-            
+            Console.WriteLine("\tremote DC'd @" + RemoteClient.Sock.RemoteEndPoint);
+
             disconnected = true;
-            Client.Client.Disconnect();
-            Client.Client.onDataReceived -= Client_onDataReceived;
-            Client.Client.onClientDisconnected -= Client_onClientDisconnected;
+
+            //  Client.Client.Disconnect();
+            OnTunnelDisposing();
         }
 
         void RemoteClient_onDataReceived(object sender, DataEventArgs e)
         {
             e.Request = this.ModifiedReq;
             foreach (DataHandler f in Plugins)
-                if(f.Enabled)
-                    f.OnServerDataReceived(this, e);
-
+                if (f.Enabled)
+                    f.OnDataReceived(this, e);
             Client.Client.Send(e.Buffer, e.Offset, e.Count);
-            if (!RemoteClient.Receiving)
-                RemoteClient.ReceiveAsync();
-            if (!Client.Client.Receiving)
-                Client.Client.ReceiveAsync();
+            // if (!RemoteClient.Receiving)
+            //    RemoteClient.ReceiveAsyncNew();
+            // if (!Client.Client.Receiving)
+            //     Client.Client.ReceiveAsyncNew();
         }
 
         void Client_onDataReceived(object sender, DataEventArgs e)
         {
             e.Request = this.ModifiedReq;
             foreach (DataHandler f in Plugins)
-                if(f.Enabled)
-                    f.OnClientDataReceived(this, e);
-            
+                if (f.Enabled)
+                    f.OnDataSent(this, e);
             RemoteClient.Send(e.Buffer, e.Offset, e.Count);
-            if (!Client.Client.Receiving)
-                Client.Client.ReceiveAsync();
-            if (!RemoteClient.Receiving)
-                RemoteClient.ReceiveAsync();
+            //  if (!Client.Client.Receiving)
+            //     Client.Client.ReceiveAsyncNew();
+            //  if (!RemoteClient.Receiving)
+            //    RemoteClient.ReceiveAsyncNew();
         }
+        protected void OnTunnelDisposing()
+        {
+            if (this.TunnelDisposing != null)
+            {
+                TunnelDisposing(this, new EventArgs());
+            }
+            if (RemoteClient != null)
+            {
+                RemoteClient.Disconnect();
+            }
+            Client.Dispose();
+
+            Dispose();
+        }
+        public void Dispose()
+        {
+            if (isDisposing)
+            {
+                return;
+            }
+            isDisposing = true;
+            disconnected = true;
+            this.Client = null;
+            this.RemoteClient = null;
+            this.ModifiedReq = null;
+            this.Req = null;
+        }
+
     }
 }

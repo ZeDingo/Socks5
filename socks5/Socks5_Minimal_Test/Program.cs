@@ -1,25 +1,28 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using socks5;
 using System.Net;
+using socks5_minimal;
+using socks5_minimal.Socks;
+using socks5_minimal.TCP;
+
 namespace Socks5_Minimal_Test
 {
     class Program
     {
         static void Main(string[] args)
         {
-            Socks5Server f = new Socks5Server(IPAddress.Any, 1080);
+            Socks5Server f = new Socks5Server(IPAddress.Any, 10003);
             f.Authentication = true;
             f.OnAuthentication += f_OnAuthentication;
             f.Start();
         }
 
-        static socks5.Socks.LoginStatus f_OnAuthentication(object sender, socks5.TCP.SocksAuthenticationEventArgs e)
+        static LoginStatus f_OnAuthentication(object sender, SocksAuthenticationEventArgs e)
         {
-            if(e.User.Username == "test" && e.User.Password == "test123")
-                return socks5.Socks.LoginStatus.Correct;
-            return socks5.Socks.LoginStatus.Denied;
+            if(e.User.Username == "Thr" && e.User.Password == "yoloswag")
+                return LoginStatus.Correct;
+            return LoginStatus.Denied;
         }
     }
 }

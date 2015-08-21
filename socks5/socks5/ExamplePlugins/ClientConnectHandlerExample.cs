@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Socona.Fiveocks.Plugin;
 
-namespace socks5.ExamplePlugins
+namespace Socona.Fiveocks.ExamplePlugins
 {
-    class ClientConnectHandlerExample : socks5.Plugin.ClientConnectedHandler
+    class ClientConnectHandlerExample : ClientConnectedHandler
     {
         public override bool OnConnect(TCP.Client Client, System.Net.IPEndPoint IP)
         {

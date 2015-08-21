@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Net.Sockets;
-using System.Text;
-using socks5.Socks;
-namespace socks5.TCP
+using socks5_minimal.Socks;
+
+namespace socks5_minimal.TCP
 {
     public class ClientEventArgs : EventArgs
     {

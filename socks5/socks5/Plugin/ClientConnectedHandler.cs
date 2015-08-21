@@ -1,9 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net;
-using System.Text;
+﻿using System.Net;
+using Socona.Fiveocks.TCP;
 
-namespace socks5.Plugin
+namespace Socona.Fiveocks.Plugin
 {
     public abstract class ClientConnectedHandler : GenericPlugin
     {
@@ -12,7 +10,7 @@ namespace socks5.Plugin
         /// </summary>
         /// <param name="Client"></param>
         /// <returns>Return true to allow the connection, return false to deny it.</returns>
-        public abstract bool OnConnect(socks5.TCP.Client Client, IPEndPoint IP);
+        public abstract bool OnConnect(Client Client, IPEndPoint IP);
         public abstract bool Enabled { get; set; }
     }
 }

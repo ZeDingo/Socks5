@@ -1,10 +1,6 @@
-﻿using socks5.Socks;
-using System;
-using System.Collections.Generic;
-using System.Net.Sockets;
-using System.Text;
+﻿using Socona.Fiveocks.Socks;
 
-namespace socks5.Plugin
+namespace Socona.Fiveocks.Plugin
 {
     public abstract class ConnectHandler : GenericPlugin
     {

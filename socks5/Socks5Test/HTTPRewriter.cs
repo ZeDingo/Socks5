@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using socks5;
-using socks5.HTTP;
+using Socona.Fiveocks;
+using Socona.Fiveocks.Plugin;
+using Socona.Fiveocks.TCP;
+
 namespace Socks5Test
 {
-    class HTTPRewriter : socks5.Plugin.DataHandler
+    class HTTPRewriter : DataHandler
     {
-        public override void OnServerDataReceived(object sender, socks5.TCP.DataEventArgs e)
+        public override void OnDataReceived(object sender, DataEventArgs e)
         {
             if (e.Buffer.FindString("HTTP/1.") != -1 && e.Buffer.FindString("\r\n") != -1)
             {
@@ -16,7 +18,7 @@ namespace Socks5Test
             }
         }
 
-        public override void OnClientDataReceived(object sender, socks5.TCP.DataEventArgs e)
+        public override void OnDataSent(object sender, DataEventArgs e)
         {
            
         }

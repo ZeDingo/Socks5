@@ -1,12 +1,12 @@
-﻿using System.Net.Sockets;
-using socks5.Encryption;
-using socks5.TCP;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
+using Socona.Fiveocks.Encryption;
+using Socona.Fiveocks.TCP;
 
-namespace socks5.Socks
+namespace Socona.Fiveocks.Socks
 {
     class Socks5
     {
@@ -192,8 +192,6 @@ namespace socks5.Socks
             StreamType = type;
             Address = address;
             Port = port;
-            Error = SocksError.Granted;
-            IPAddress p = this.IP; //get Error on the stack.
         }
         public IPAddress IP
         {
@@ -231,15 +229,12 @@ namespace socks5.Socks
                 }
             }
         }
-        public byte[] GetData(bool NetworkToHostOrder)
+        public byte[] GetData(bool networkToHostOrder)
         {
             byte[] data;
             var port = 0;
-            if (NetworkToHostOrder)
-                port = IPAddress.NetworkToHostOrder(Port);
-            else
-                port = IPAddress.HostToNetworkOrder(Convert.ToInt16(Port));
-            
+            port = networkToHostOrder ? IPAddress.NetworkToHostOrder(Port) : IPAddress.HostToNetworkOrder(Convert.ToInt16(Port));
+
             if (Type == AddressType.IP)
             {
                 data = new byte[10];
@@ -256,7 +251,7 @@ namespace socks5.Socks
                 Buffer.BlockCopy(BitConverter.GetBytes(port), 0, data, data.Length - 2, 2);
             }
             else return null;
-            data[0] = 0x05;                
+            data[0] = 0x05;
             data[1] = (byte)Error;
             data[2] = 0x00;
             data[3] = (byte)Type;

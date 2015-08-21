@@ -1,9 +1,6 @@
-﻿using socks5.Socks;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Socona.Fiveocks.Socks;
 
-namespace socks5.Plugin
+namespace Socona.Fiveocks.Plugin
 {
     public enum LoginStatus
     {
@@ -14,6 +11,5 @@ namespace socks5.Plugin
     {
         public abstract LoginStatus HandleLogin(User user);
         public abstract bool Enabled { get; set; }
-        //
     }
 }

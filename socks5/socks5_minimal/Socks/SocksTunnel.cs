@@ -1,12 +1,9 @@
-﻿using socks5.Socks;
-using socks5.TCP;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
+using socks5_minimal.TCP;
 
-namespace socks5
+namespace socks5_minimal.Socks
 {
     class SocksTunnel
     {

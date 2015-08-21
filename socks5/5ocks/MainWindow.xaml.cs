@@ -1,27 +1,21 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using socks5;
-using socks5.Plugin;
-using socks5.Socks5Client;
-using Socona.Fiveocks;
+using Socona.Fiveocks.ExamplePlugins;
+using Socona.Fiveocks.Plugin;
+using Socona.Fiveocks.Socks;
+using Socona.Fiveocks.Socks5Client.Events;
+using Socona.Fiveocks.SocksServer;
+using Socona.Fiveocks.TCP;
 using Timer = System.Timers.Timer;
 
-namespace _5ocks
+namespace Socona.Fiveocks
 {
     /// <summary>
     /// MainWindow.xaml 的交互逻辑
@@ -43,26 +37,24 @@ namespace _5ocks
         private StreamWriter logWriter;
         private StreamReader logReader;
 
-        
+
         private int timetickcnt;
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             logStream = new MemoryStream();
             logWriter = new StreamWriter(logStream);
             logReader = new StreamReader(logStream);
-            port = 10084;
-            txtIpAddr.Text = IPAddress.IPv6Any.ToString() + ":" + port.ToString();
-            var thread = new Thread(() =>
-              {
-                  x = new Socks5Server(IPAddress.Any, port);
-                  x.Start();
-                  TestServer();
-              });
-            normalOutput = Console.Out;
-            TextBoxWriter tbw = new TextBoxWriter(txtLog);
-            Console.SetOut(tbw);
+            port = 80;
+            txtIpAddr.Text = IPAddress.Any.ToString() + ":" + port.ToString();
+            x = new Socks5Server(IPAddress.Any, port);
+            x.Start();
+            TestServer();
 
-            thread.Start();
+            normalOutput = Console.Out;
+
+            Console.SetOut(logWriter);
+
+
             timer = new Timer(500);
             timer.Elapsed += timer_Elapsed;
             timer.Start();
@@ -80,21 +72,22 @@ namespace _5ocks
 
                 timetickcnt = 0;
                 TestServer();
-                
+
             }
             if (timetickcnt % 2 == 0)
             {
                 this.Dispatcher.Invoke(() =>
                 {
+                    txtAvailableBuffer.Text = BufferManager.DefaultManager.AvailableBuffers.ToString();
                     if (x != null)
                     {
                         txtDownSpeed.Text = x.Stats.BytesSentPerSec;
                         txtUpSpeed.Text = x.Stats.BytesReceivedPerSec;
-                        
-                        txtSumRecv.Text = ((x.Stats.NetworkReceived / 1024f) / 1024f).ToString("#0.000") + "MB";
 
-                    txtSumSend.Text = ((x.Stats.NetworkSent / 1024f) / 1024f).ToString("#0.000") + "MB";
-                    txtClients.Text = x.Stats.TotalClients.ToString();
+                        txtSumRecv.Text = x.Stats.TotalReceived;
+
+                        txtSumSend.Text = x.Stats.TotoalSent;
+                        txtClients.Text = x.Stats.TotalClients.ToString();
                     }
                 });
             }
@@ -111,9 +104,10 @@ namespace _5ocks
                 txtLog.ScrollToEnd();
             });
         }
+
         void TestServer()
         {
-            
+
             if (testing == false)
             {
                 this.Dispatcher.Invoke(() =>
@@ -126,7 +120,7 @@ namespace _5ocks
                 try
                 {
 
-                    Socks5Client p = new Socks5Client("localhost", 10084, "www.baidu.com", 80, "yolo", "swag");
+                    Socks5Client.Socks5Client p = new Socks5Client.Socks5Client("localhost", 80, "www.baidu.com", 80, "lemur", "bison");
                     // p.OnConnected += p_OnConnected;
                     if (p.Connect())
                     {
@@ -181,7 +175,7 @@ namespace _5ocks
         static byte[] m;
         void p_OnConnected(object sender, Socks5ClientArgs e)
         {
-            if (e.Status == socks5.Socks.SocksError.Granted)
+            if (e.Status == SocksError.Granted)
             {
                 e.Client.OnDataReceived += Client_OnDataReceived;
                 e.Client.OnDisconnected += Client_OnDisconnected;
@@ -219,7 +213,10 @@ namespace _5ocks
             {
                 Console.SetOut(normalOutput);
             }
-            timer.Stop();
+            if (timer != null)
+            {
+                timer.Stop();
+            }
             if (x != null)
             {
                 x.Stop();
@@ -243,14 +240,22 @@ namespace _5ocks
                 {
 
                     DoLog("SERVER STOPPING!");
-                    x.Stop();
+                    try
+                    {
+                        x.Stop();
+                    }
+                    catch (Exception ex)
+                    {
+                        DoLog(ex.Message);
+                    }
                     x = null;
+
                     DoLog("\tSERVER STOPPED!");
                 }
                 DoLog("SERVER RESTARTING!");
                 x = new Socks5Server(IPAddress.Any, port);
                 x.Start();
-                PluginLoader.ChangePluginStatus(false, typeof(socks5.ExamplePlugins.DataHandlerExample));
+                PluginLoader.ChangePluginStatus(false, typeof(DataHandlerExample));
                 //enable plugin.
                 foreach (object pl in PluginLoader.GetPlugins)
                 {
@@ -263,7 +268,7 @@ namespace _5ocks
                 }
 
                 //Start showing network stats.
-                Socks5Client p = new Socks5Client("localhost", 10084, "127.0.0.1", 10084, "yolo", "swag");
+                Socks5Client.Socks5Client p = new Socks5Client.Socks5Client("localhost", 80, "127.0.0.1", 80, "lemur", "bison");
                 p.OnConnected += p_OnConnected;
                 p.ConnectAsync();
                 //while (true)

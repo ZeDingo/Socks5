@@ -1,11 +1,7 @@
-﻿using socks5.Socks;
-using socks5.TCP;
-using System;
-using System.Collections.Generic;
-using System.Net.Sockets;
-using System.Text;
+﻿using Socona.Fiveocks.Socks;
+using Socona.Fiveocks.TCP;
 
-namespace socks5.Plugin
+namespace Socona.Fiveocks.Plugin
 {
     public abstract class ConnectSocketOverrideHandler : GenericPlugin
     {

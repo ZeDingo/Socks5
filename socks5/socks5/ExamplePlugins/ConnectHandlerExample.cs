@@ -1,9 +1,7 @@
-﻿using socks5.Plugin;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System;
+using Socona.Fiveocks.Plugin;
 
-namespace socks5.ExamplePlugins
+namespace Socona.Fiveocks.ExamplePlugins
 {
     public class ConnectHandlerExample : ConnectHandler
     {

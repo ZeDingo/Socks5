@@ -1,17 +1,16 @@
-﻿using socks5.Encryption;
-using socks5.Plugin;
-using socks5.TCP;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
+using Socona.Fiveocks.Encryption;
+using Socona.Fiveocks.Plugin;
+using Socona.Fiveocks.TCP;
 
-namespace socks5.Socks
+namespace Socona.Fiveocks.Socks
 {
-    class SocksSpecialTunnel
+    class SocksSpecialTunnel : IDisposable
     {
-         public SocksRequest Req;
+        public SocksRequest Req;
         public SocksRequest ModifiedReq;
 
         public SocksClient Client;
@@ -22,7 +21,8 @@ namespace socks5.Socks
         private int Timeout = 10000;
         private int PacketSize = 4096;
         private SocksEncryption se;
-
+        public event EventHandler TunnelDisposing;
+        private bool isDisposing;
         public SocksSpecialTunnel(SocksClient p, SocksEncryption ph, SocksRequest req, SocksRequest req1, int packetSize, int timeout)
         {
             RemoteClient = new Client(new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), PacketSize);
@@ -31,37 +31,38 @@ namespace socks5.Socks
             ModifiedReq = req1;
             PacketSize = packetSize;
             Timeout = timeout;
-            se = ph; 
+            se = ph;
+            isDisposing = false;
         }
 
-        public void Open()
+        public void Start()
         {
             if (ModifiedReq.Address == null || ModifiedReq.Port <= -1) { Client.Client.Disconnect(); return; }
 #if DEBUG
             Console.WriteLine("{0}:{1}", ModifiedReq.Address, ModifiedReq.Port);
 #endif
             foreach (ConnectSocketOverrideHandler conn in PluginLoader.LoadPlugin(typeof(ConnectSocketOverrideHandler)))
-            if(conn.Enabled)
-            {
-                Client pm = conn.OnConnectOverride(ModifiedReq);
-                if (pm != null)
+                if (conn.Enabled)
                 {
-                    //check if it's connected.
-                    if (pm.Sock.Connected)
+                    Client pm = conn.OnConnectOverride(ModifiedReq);
+                    if (pm != null)
                     {
-                        RemoteClient = pm;
-                        //send request right here.
-                        byte[] shit = Req.GetData(true);
-                        shit[1] = 0x00;
-                        //process packet.
-                        byte[] output = se.ProcessOutputData(shit, 0, shit.Length);
-                        //gucci let's go.
-                        Client.Client.Send(output);
-                        ConnectHandler(null);
-                        return;
+                        //check if it's connected.
+                        if (pm.Sock.Connected)
+                        {
+                            RemoteClient = pm;
+                            //send request right here.
+                            byte[] shit = Req.GetData(true);
+                            shit[1] = 0x00;
+                            //process packet.
+                            byte[] output = se.ProcessOutputData(shit, 0, shit.Length);
+                            //gucci let's go.
+                            Client.Client.Send(output);
+                            ConnectHandler(null);
+                            return;
+                        }
                     }
                 }
-            }
             var socketArgs = new SocketAsyncEventArgs { RemoteEndPoint = new IPEndPoint(ModifiedReq.IP, ModifiedReq.Port) };
             socketArgs.Completed += socketArgs_Completed;
             RemoteClient.Sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -90,7 +91,7 @@ namespace socks5.Socks
                 case SocketAsyncOperation.Connect:
                     //connected;
                     ConnectHandler(e);
-                    break;               
+                    break;
             }
         }
 
@@ -104,24 +105,26 @@ namespace socks5.Socks
                     Plugins.Push(data);
                 Client.Client.onDataReceived += Client_onDataReceived;
                 RemoteClient.onDataReceived += RemoteClient_onDataReceived;
-                RemoteClient.onClientDisconnected += RemoteClient_onClientDisconnected;
-                Client.Client.onClientDisconnected += Client_onClientDisconnected;
-                Client.Client.ReceiveAsync();
-                RemoteClient.ReceiveAsync();
+                RemoteClient.ClientDisconnecting += RemoteClientClientDisconnecting;
+                Client.Client.ClientDisconnecting += ClientClientDisconnecting;
+                Client.Client.ReceiveAsyncNew();
+                RemoteClient.ReceiveAsyncNew();
             }
             catch
             {
             }
         }
         bool disconnected = false;
-        void Client_onClientDisconnected(object sender, ClientEventArgs e)
+        //  private bool remotedcd = false;
+        void ClientClientDisconnecting(object sender, ClientEventArgs e)
         {
             if (disconnected) return;
             disconnected = true;
             RemoteClient.Disconnect();
+            OnTunnelDisposing();
         }
 
-        void RemoteClient_onClientDisconnected(object sender, ClientEventArgs e)
+        void RemoteClientClientDisconnecting(object sender, ClientEventArgs e)
         {
 #if DEBUG
             Console.WriteLine("Remote DC'd");
@@ -129,7 +132,7 @@ namespace socks5.Socks
             if (disconnected) return;
             disconnected = true;
             Client.Client.Disconnect();
-            disconnected = true;
+            OnTunnelDisposing();
         }
 
         void RemoteClient_onDataReceived(object sender, DataEventArgs e)
@@ -139,7 +142,7 @@ namespace socks5.Socks
             {
                 foreach (DataHandler f in Plugins)
                     if (f.Enabled)
-                        f.OnServerDataReceived(this, e);
+                        f.OnDataReceived(this, e);
                 //craft headers & shit.
                 byte[] outputdata = se.ProcessOutputData(e.Buffer, e.Offset, e.Count);
                 //send outputdata's length firs.t
@@ -149,16 +152,17 @@ namespace socks5.Socks
                 e.Count = outputdata.Length;
                 //ok now send data.
                 Client.Client.Send(e.Buffer, e.Offset, e.Count);
-                if(!RemoteClient.Receiving)
-                    RemoteClient.ReceiveAsync();
-                if (!Client.Client.Receiving)
-                    Client.Client.ReceiveAsync();
-                
+                //  if (!RemoteClient.Receiving)
+                //       RemoteClient.ReceiveAsyncNew();
+                //   if (!Client.Client.Receiving)
+                //        Client.Client.ReceiveAsyncNew();
+
             }
             catch
             {
                 Client.Client.Disconnect();
                 RemoteClient.Disconnect();
+                OnTunnelDisposing();
             }
         }
 
@@ -182,12 +186,12 @@ namespace socks5.Socks
                     //receive full packet.
                     foreach (DataHandler f in Plugins)
                         if (f.Enabled)
-                            f.OnClientDataReceived(this, e);
-                    RemoteClient.SendAsync(e.Buffer, e.Offset, e.Count);                   
-                    if (!Client.Client.Receiving)
-                        Client.Client.ReceiveAsync();
-                    if (!RemoteClient.Receiving)
-                        RemoteClient.ReceiveAsync();
+                            f.OnDataSent(this, e);
+                    RemoteClient.SendAsync(e.Buffer, e.Offset, e.Count);
+                    //    if (!Client.Client.Receiving)
+                    //        Client.Client.ReceiveAsyncNew();
+                    //   if (!RemoteClient.Receiving)
+                    //     RemoteClient.ReceiveAsyncNew();
                 }
                 else
                 {
@@ -199,7 +203,32 @@ namespace socks5.Socks
                 //disconnect.
                 Client.Client.Disconnect();
                 RemoteClient.Disconnect();
+                OnTunnelDisposing();
             }
         }
+
+        protected void OnTunnelDisposing()
+        {
+            if (this.TunnelDisposing != null)
+            {
+                TunnelDisposing(this, new EventArgs());
+            }
+            Dispose();
+        }
+        public void Dispose()
+        {
+            if (isDisposing)
+            {
+                return;
+            }
+            isDisposing = true;
+            disconnected = true;
+            this.Client = null;
+            this.RemoteClient = null;
+            this.ModifiedReq = null;
+            this.Req = null;
+        }
+
+
     }
 }

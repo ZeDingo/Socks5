@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Net.Sockets;
-using System.Text;
-using socks5.Socks;
-namespace socks5.TCP
+using Socona.Fiveocks.Socks;
+
+namespace Socona.Fiveocks.TCP
 {
     public class ClientEventArgs : EventArgs
     {

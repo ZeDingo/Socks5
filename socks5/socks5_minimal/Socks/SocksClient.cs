@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Net;
-using socks5.TCP;
-namespace socks5.Socks
+using socks5_minimal.TCP;
+
+namespace socks5_minimal.Socks
 {
     public class SocksClient
     {

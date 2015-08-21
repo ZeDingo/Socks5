@@ -1,12 +1,11 @@
-﻿using socks5.Encryption;
-using socks5.Socks;
-using socks5.TCP;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Net;
 using System.Text;
+using Socona.Fiveocks.Encryption;
+using Socona.Fiveocks.Socks;
+using Socona.Fiveocks.TCP;
 
-namespace socks5.Socks5Client
+namespace Socona.Fiveocks.Socks5Client
 {
     public class Socks
     {
@@ -51,7 +50,7 @@ namespace socks5.Socks5Client
             return 0;
         }
 
-        public static socks5.Socks.SocksError SendRequest(Client cli, SocksEncryption enc, string ipOrDomain, int port)
+        public static SocksError SendRequest(Client cli, SocksEncryption enc, string ipOrDomain, int port)
         {
             AddressType type;
             IPAddress ipAddress;

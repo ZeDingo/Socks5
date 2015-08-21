@@ -1,10 +1,9 @@
-﻿using socks5.Socks;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Security.Cryptography;
 using System.Text;
+using Socona.Fiveocks.Socks;
 
-namespace socks5.Encryption
+namespace Socona.Fiveocks.Encryption
 {
     public class SocksEncryption
     {

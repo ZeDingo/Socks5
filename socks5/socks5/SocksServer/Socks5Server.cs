@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
-using socks5.TCP;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using socks5.Plugin;
-using socks5.Socks;
-namespace socks5
+using Socona.Fiveocks.Plugin;
+using Socona.Fiveocks.Socks;
+using Socona.Fiveocks.TCP;
+
+namespace Socona.Fiveocks.SocksServer
 {
     public class Socks5Server
     {
@@ -15,7 +15,7 @@ namespace socks5
         public int PacketSize { get; set; }
         public bool LoadPluginsFromDisk { get; set; }
 
-        private TcpServer _server;
+        public TcpServer _server;
         private Thread NetworkStats;
 
         public List<SocksClient> Clients = new List<SocksClient>();
@@ -35,29 +35,32 @@ namespace socks5
             LoadPluginsFromDisk = false;
             Stats = new Stats();
             _server = new TcpServer(ip, port);
-            _server.onClientConnected += _server_onClientConnected;
+            _server.ClientConnected += ServerClientConnected;
         }
 
         public void Start()
         {
             if (started) return;
             Plugin.PluginLoader.LoadPluginsFromDisk = LoadPluginsFromDisk;
-            PluginLoader.LoadPlugins(); 
+            PluginLoader.LoadPlugins();
             _server.PacketSize = PacketSize;
             _server.Start();
             started = true;
             //start thread.
-            NetworkStats = new Thread(new ThreadStart(delegate()
+            // NetworkStats = new Thread(new ThreadStart(delegate()
+            //  {
+            Task.Factory.StartNew(async () =>
             {
                 while (started)
                 {
                     if (this.Clients.Contains(null))
                         this.Clients.Remove(null);
                     Stats.ResetClients(this.Clients.Count);
-                    Thread.Sleep(1000);
+                    await Task.Delay(1000);
                 }
-            }));
-            NetworkStats.Start();
+            });
+            // }));
+            //NetworkStats.Start();
         }
 
         public void Stop()
@@ -66,20 +69,19 @@ namespace socks5
             _server.Stop();
             for (int i = 0; i < Clients.Count; i++)
             {
-                Clients[i].Client.Disconnect();
+                Clients[i].Dispose();
             }
             Clients.Clear();
             started = false;
         }
 
-        void _server_onClientConnected(object sender, ClientEventArgs e)
+        void ServerClientConnected(object sender, ClientEventArgs e)
         {
 #if DEBUG
             Console.WriteLine("New Client :");
 #endif
             //call plugins related to ClientConnectedHandler.
             foreach (ClientConnectedHandler cch in PluginLoader.LoadPlugin(typeof(ClientConnectedHandler)))
-            {
                 if (cch.Enabled)
                 {
                     try
@@ -94,14 +96,23 @@ namespace socks5
                     {
                     }
                 }
-                
-            }
+
             SocksClient client = new SocksClient(e.Client);
             e.Client.onDataReceived += Client_onDataReceived;
             e.Client.onDataSent += Client_onDataSent;
             client.onClientDisconnected += client_onClientDisconnected;
             Clients.Add(client);
-            client.Begin(this.PacketSize, this.Timeout);
+            try
+            {
+                client.Start(this.PacketSize, this.Timeout);
+            }
+            catch (ObjectDisposedException ex)
+            {
+                Console.WriteLine(ex.Message);
+                Clients.Remove(client);
+                client.Dispose();
+                client = null;
+            }
 
         }
 
@@ -111,33 +122,19 @@ namespace socks5
             e.Client.Client.onDataReceived -= Client_onDataReceived;
             e.Client.Client.onDataSent -= Client_onDataSent;
             this.Clients.Remove(e.Client);
-            foreach (ClientDisconnectedHandler cdh in PluginLoader.LoadPlugin(typeof(ClientDisconnectedHandler)))
-            {
-                if (cdh.Enabled)
-                {
-                    try
-                    {
-                        cdh.OnDisconnected(sender, e);
-                    }
-                    catch
-                    {
-                    }
-                }
-            }
         }
 
         void Client_onDataSent(object sender, DataEventArgs e)
         {
             this.Stats.AddBytes(e.Count, ByteType.Sent);
             this.Stats.AddPacket(PacketType.Sent);
-            
+
         }
 
         void Client_onDataReceived(object sender, DataEventArgs e)
         {
             this.Stats.AddBytes(e.Count, ByteType.Received);
             this.Stats.AddPacket(PacketType.Received);
-            
         }
     }
 }

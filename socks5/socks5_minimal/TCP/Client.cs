@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.Sockets;
-using System.Text;
 
-namespace socks5.TCP
+namespace socks5_minimal.TCP
 {
     public class Client
     {

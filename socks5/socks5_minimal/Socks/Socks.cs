@@ -1,10 +1,10 @@
-﻿using socks5.TCP;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
+using socks5_minimal.TCP;
 
-namespace socks5.Socks
+namespace socks5_minimal.Socks
 {
     class Socks5
     {

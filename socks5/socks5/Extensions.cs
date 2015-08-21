@@ -2,14 +2,13 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
-namespace System.Runtime.CompilerServices
+
+namespace Socona.Fiveocks
 {
     [AttributeUsage(AttributeTargets.Assembly | AttributeTargets.Class
-         | AttributeTargets.Method)]
+                    | AttributeTargets.Method)]
     public sealed class ExtensionAttribute : Attribute { }
-}
-namespace socks5
-{
+
     public static class Extensions
     {
         public static string ToHex(this int value)

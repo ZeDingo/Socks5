@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.Sockets;
-using System.Text;
-using socks5;
-namespace socks5.HTTP
+
+namespace Socona.Fiveocks.HTTP
 {
     //WARNING: BETA - Doesn't work as well as intended. Use at your own discretion.
     public class Chunked

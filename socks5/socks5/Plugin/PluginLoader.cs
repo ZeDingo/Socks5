@@ -2,9 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
-using System.Text;
 
-namespace socks5.Plugin
+namespace Socona.Fiveocks.Plugin
 {
     public class PluginLoader
     {

@@ -1,12 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Net.Sockets;
 using System.Net;
-using System.Threading;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 
-namespace socks5.TCP
+namespace Socona.Fiveocks.TCP
 {
     public class TcpServer
     {
@@ -14,70 +11,53 @@ namespace socks5.TCP
         private bool accept = false;
         public int PacketSize { get; set; }
 
-        public event EventHandler<ClientEventArgs> onClientConnected = delegate { };
-        public event EventHandler<ClientEventArgs> onClientDisconnected = delegate { };
+        public event EventHandler<ClientEventArgs> ClientConnected = delegate { };
+        public event EventHandler<ClientEventArgs> ClientDisconnecting = delegate { };
 
-        //public event EventHandler<DataEventArgs> onDataReceived = delegate { };
-        //public event EventHandler<DataEventArgs> onDataSent = delegate { };
+        public event EventHandler<DataEventArgs> onDataReceived = delegate { };
+        public event EventHandler<DataEventArgs> onDataSent = delegate { };
 
         public TcpServer(IPAddress ip, int port)
         {
             p = TcpListener.Create(port);
+
         }
 
-        private ManualResetEventSlim signal = new ManualResetEventSlim(false);
+        // private ManualResetEventSlim signal = new ManualResetEventSlim(false);
 
-        private void AcceptConnections()
+        private async void AcceptConnections()
         {
             while (accept)
             {
                 try
                 {
-                    signal.Reset();
-                    p.BeginAcceptSocket(new AsyncCallback(AcceptClient), p);
-                    signal.Wait();
+                    Socket x = await p.AcceptSocketAsync();
+
+                    if (x == null)
+                    {
+                        break;
+                    }
+                    Client f = new Client(x, PacketSize);
+                    f.ClientDisconnecting += ClientDisconnecting;
+                    f.onDataReceived += onDataReceived;
+                    f.onDataSent += onDataSent;
+                    ClientConnected(this, new ClientEventArgs(f));
                 }
-                catch 
-                { //error, most likely server shutdown.
+                catch (ObjectDisposedException ex)
+                {
+                    Console.WriteLine(ex.Message);
+                    break;
                 }
             }
         }
-
-        void AcceptClient(IAsyncResult res)
-        {
-            try
-            {
-                TcpListener px = (TcpListener) res.AsyncState;
-                Socket x = px.EndAcceptSocket(res);
-                signal.Set();
-                
-                Client f = new Client(x, PacketSize);
-                f.onClientDisconnected += onClientDisconnected;
-                f.onDataReceived += onDataReceived;
-                f.onDataSent += onDataSent;
-                onClientConnected(this, new ClientEventArgs(f));
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-                //server stopped or client errored?
-            }
-            finally
-            {
-                if (!signal.IsSet)
-                {
-                    signal.Set();
-                }
-            }
-         }
 
         public void Start()
         {
             if (!accept)
             {
                 accept = true;
-                p.Start(10000);               
-                new Thread(new ThreadStart(AcceptConnections)).Start();
+                p.Start(1000);
+                Task.Factory.StartNew(AcceptConnections);
             }
         }
 
@@ -87,7 +67,8 @@ namespace socks5.TCP
             {
                 accept = false;
                 p.Stop();
-                signal.Set();
+                p = null;
+
             }
         }
     }
