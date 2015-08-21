@@ -4,6 +4,7 @@ using System.Text;
 using System.Net.Sockets;
 using System.Net;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace socks5.TCP
 {
@@ -11,7 +12,7 @@ namespace socks5.TCP
     {
         private TcpListener p;
         private bool accept = false;
-        public int PacketSize{get;set;}
+        public int PacketSize { get; set; }
 
         public event EventHandler<ClientEventArgs> onClientConnected = delegate { };
         public event EventHandler<ClientEventArgs> onClientDisconnected = delegate { };
@@ -24,19 +25,20 @@ namespace socks5.TCP
             p = TcpListener.Create(port);
         }
 
-        private ManualResetEventSlim Task = new ManualResetEventSlim(false);
+        private ManualResetEventSlim signal = new ManualResetEventSlim(false);
 
         private void AcceptConnections()
         {
-            while(accept)
+            while (accept)
             {
                 try
                 {
-                    Task.Reset();
+                    signal.Reset();
                     p.BeginAcceptSocket(new AsyncCallback(AcceptClient), p);
-                    Task.Wait();
+                    signal.Wait();
                 }
-                catch { //error, most likely server shutdown.
+                catch 
+                { //error, most likely server shutdown.
                 }
             }
         }
@@ -47,11 +49,12 @@ namespace socks5.TCP
             {
                 TcpListener px = (TcpListener) res.AsyncState;
                 Socket x = px.EndAcceptSocket(res);
-                Task.Set();
+                signal.Set();
+                
                 Client f = new Client(x, PacketSize);
-                //f.onClientDisconnected += onClientDisconnected;
-                //f.onDataReceived += onDataReceived;
-                //f.onDataSent += onDataSent;
+                f.onClientDisconnected += onClientDisconnected;
+                f.onDataReceived += onDataReceived;
+                f.onDataSent += onDataSent;
                 onClientConnected(this, new ClientEventArgs(f));
             }
             catch (Exception ex)
@@ -61,9 +64,9 @@ namespace socks5.TCP
             }
             finally
             {
-                if (!Task.IsSet)
+                if (!signal.IsSet)
                 {
-                    Task.Set();
+                    signal.Set();
                 }
             }
          }
@@ -84,7 +87,7 @@ namespace socks5.TCP
             {
                 accept = false;
                 p.Stop();
-                Task.Set();
+                signal.Set();
             }
         }
     }

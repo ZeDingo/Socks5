@@ -39,7 +39,7 @@ namespace socks5
         {
             if (ModifiedReq.Address == null || ModifiedReq.Port <= -1 || ModifiedReq.IP == null) { Client.Client.Disconnect(); return; }
 
-            Console.WriteLine("{0}:{1}({2})", ModifiedReq.Address, ModifiedReq.Port, ModifiedReq.IP);
+            Console.WriteLine("Client: {0}:{1}({2})", ModifiedReq.Address, ModifiedReq.Port, ModifiedReq.IP);
 
             foreach (ConnectSocketOverrideHandler conn in PluginLoader.LoadPlugin(typeof(ConnectSocketOverrideHandler)))
             if(conn.Enabled)

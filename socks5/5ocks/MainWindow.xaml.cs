@@ -39,9 +39,17 @@ namespace _5ocks
         private Timer timer;
         private TextWriter normalOutput;
 
+        private MemoryStream logStream;
+        private StreamWriter logWriter;
+        private StreamReader logReader;
+
+        
         private int timetickcnt;
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
+            logStream = new MemoryStream();
+            logWriter = new StreamWriter(logStream);
+            logReader = new StreamReader(logStream);
             port = 10084;
             txtIpAddr.Text = IPAddress.IPv6Any.ToString() + ":" + port.ToString();
             var thread = new Thread(() =>
@@ -55,7 +63,7 @@ namespace _5ocks
             Console.SetOut(tbw);
 
             thread.Start();
-            timer = new Timer(1000);
+            timer = new Timer(500);
             timer.Elapsed += timer_Elapsed;
             timer.Start();
         }
@@ -63,27 +71,46 @@ namespace _5ocks
         void timer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
             timetickcnt++;
-            if (timetickcnt > 120)
+            if (timetickcnt > 480)
             {
+                this.Dispatcher.Invoke(() =>
+                {
+                    txtLog.Clear();
+                });
+
                 timetickcnt = 0;
                 TestServer();
                 
             }
-            this.Dispatcher.Invoke(() =>
+            if (timetickcnt % 2 == 0)
             {
-                if (x != null)
+                this.Dispatcher.Invoke(() =>
                 {
-                    txtDownSpeed.Text = x.Stats.BytesSentPerSec;
-                    txtUpSpeed.Text = x.Stats.BytesReceivedPerSec;
-
-                    txtSumRecv.Text = ((x.Stats.NetworkReceived / 1024f) / 1024f).ToString("#0.000") + "MB";
+                    if (x != null)
+                    {
+                        txtDownSpeed.Text = x.Stats.BytesSentPerSec;
+                        txtUpSpeed.Text = x.Stats.BytesReceivedPerSec;
+                        
+                        txtSumRecv.Text = ((x.Stats.NetworkReceived / 1024f) / 1024f).ToString("#0.000") + "MB";
 
                     txtSumSend.Text = ((x.Stats.NetworkSent / 1024f) / 1024f).ToString("#0.000") + "MB";
                     txtClients.Text = x.Stats.TotalClients.ToString();
-                }
+                    }
+                });
+            }
+            string str = "";
+            lock (logStream)
+            {
+                logStream.Seek(0, SeekOrigin.Begin);
+                str = logReader.ReadToEnd();
+                logStream.SetLength(0);
+            }
+            this.Dispatcher.Invoke(() =>
+            {
+                txtLog.Text += str;
+                txtLog.ScrollToEnd();
             });
         }
-
         void TestServer()
         {
             
@@ -92,7 +119,7 @@ namespace _5ocks
                 this.Dispatcher.Invoke(() =>
                 {
                     txtStatus.Text = "TEST";
-                    txtStatus.Background=new SolidColorBrush(Color.FromRgb(0xff,0xff,0x00));
+                    txtStatus.Background = new SolidColorBrush(Color.FromRgb(0xff, 0xff, 0x00));
                 });
 
                 testing = true;
@@ -145,7 +172,7 @@ namespace _5ocks
         {
             this.Dispatcher.Invoke(() =>
             {
-                txtLog.Text += "> " + text+"\r\n";
+                txtLog.Text += "> " + text + "\r\n";
                 txtLog.ScrollToEnd();
             });
         }

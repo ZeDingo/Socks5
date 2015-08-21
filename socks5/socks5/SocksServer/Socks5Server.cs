@@ -4,6 +4,7 @@ using System.Text;
 using socks5.TCP;
 using System.Net;
 using System.Threading;
+using System.Threading.Tasks;
 using socks5.Plugin;
 using socks5.Socks;
 namespace socks5
@@ -73,8 +74,9 @@ namespace socks5
 
         void _server_onClientConnected(object sender, ClientEventArgs e)
         {
-            //Console.WriteLine("Client connected.");
+#if DEBUG
             Console.WriteLine("New Client :");
+#endif
             //call plugins related to ClientConnectedHandler.
             foreach (ClientConnectedHandler cch in PluginLoader.LoadPlugin(typeof(ClientConnectedHandler)))
             {
@@ -99,10 +101,8 @@ namespace socks5
             e.Client.onDataSent += Client_onDataSent;
             client.onClientDisconnected += client_onClientDisconnected;
             Clients.Add(client);
-            ThreadPool.QueueUserWorkItem((t) =>
-            {
-                client.Begin(this.PacketSize, this.Timeout);
-            });
+            client.Begin(this.PacketSize, this.Timeout);
+
         }
 
         void client_onClientDisconnected(object sender, SocksClientEventArgs e)
@@ -130,12 +130,14 @@ namespace socks5
         {
             this.Stats.AddBytes(e.Count, ByteType.Sent);
             this.Stats.AddPacket(PacketType.Sent);
+            
         }
 
         void Client_onDataReceived(object sender, DataEventArgs e)
         {
             this.Stats.AddBytes(e.Count, ByteType.Received);
             this.Stats.AddPacket(PacketType.Received);
+            
         }
     }
 }

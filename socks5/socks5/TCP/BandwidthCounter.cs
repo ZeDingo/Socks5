@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Numerics;
 using System.Text;
+using System.Threading;
 
 namespace socks5
 {
@@ -11,6 +13,7 @@ namespace socks5
         /// </summary>
         class MiniCounter
         {
+            
             public ulong bytes = 0;
             public ulong kbytes = 0;
             public ulong mbytes = 0;
@@ -65,9 +68,8 @@ namespace socks5
                     ret = ret / (DateTime.Now - lastRead).TotalSeconds;
 
                     lastRead = DateTime.Now;
-                    string s = ret.ToString();
-                    if (s.Length > 6)
-                        s = s.Substring(0, 6);
+                    string s = ret.ToString("#0.000");
+
                     return s + " PB";
                 }
                 else if (tbytes > 0)
@@ -76,9 +78,8 @@ namespace socks5
                     ret = ret / (DateTime.Now - lastRead).TotalSeconds;
 
                     lastRead = DateTime.Now;
-                    string s = ret.ToString();
-                    if (s.Length > 6)
-                        s = s.Substring(0, 6);
+                    string s = ret.ToString("#0.00");
+
                     return s + " TB";
                 }
                 else if (gbytes > 0)
@@ -87,9 +88,8 @@ namespace socks5
                     ret = ret / (DateTime.Now - lastRead).TotalSeconds;
 
                     lastRead = DateTime.Now;
-                    string s = ret.ToString();
-                    if (s.Length > 6)
-                        s = s.Substring(0, 6);
+                    string s = ret.ToString("#0.00");
+
                     return s + " GB";
                 }
                 else if (mbytes > 0)
@@ -98,9 +98,8 @@ namespace socks5
                     ret = ret / (DateTime.Now - lastRead).TotalSeconds;
 
                     lastRead = DateTime.Now;
-                    string s = ret.ToString();
-                    if (s.Length > 6)
-                        s = s.Substring(0, 6);
+                    string s = ret.ToString("#0.00");
+
                     return s + " MB";
                 }
                 else if (kbytes > 0)
@@ -108,9 +107,8 @@ namespace socks5
                     double ret = (double)kbytes + ((double)((double)bytes / 1024));
                     ret = ret / (DateTime.Now - lastRead).TotalSeconds;
                     lastRead = DateTime.Now;
-                    string s = ret.ToString();
-                    if (s.Length > 6)
-                        s = s.Substring(0, 6);
+                    string s = ret.ToString("#0.00");
+
                     return s + " KB";
                 }
                 else
@@ -118,20 +116,14 @@ namespace socks5
                     double ret = bytes;
                     ret = ret / (DateTime.Now - lastRead).TotalSeconds;
                     lastRead = DateTime.Now;
-                    string s = ret.ToString();
-                    if (s.Length > 6)
-                        s = s.Substring(0, 6);
+                    string s = ret.ToString("#0.00");
+
                     return s + " B";
                 }
             }
         }
-
-        private ulong bytes = 0;
-        private ulong kbytes = 0;
-        private ulong mbytes = 0;
-        private ulong gbytes = 0;
-        private ulong tbytes = 0;
-        private ulong pbytes = 0;
+        public BigInteger totalbytes;
+        
         MiniCounter perSecond = new MiniCounter();
 
         /// <summary>
@@ -159,34 +151,10 @@ namespace socks5
         /// <param name="count">Byte count</param>
         public void AddBytes(ulong count)
         {
+            
+            totalbytes += count;
             // overflow max
             perSecond.AddBytes(count);
-            bytes += count;
-            while (bytes > 1024)
-            {
-                kbytes++;
-                bytes -= 1024;
-            }
-            while (kbytes > 1024)
-            {
-                mbytes++;
-                kbytes -= 1024;
-            }
-            while (mbytes > 1024)
-            {
-                gbytes++;
-                mbytes -= 1024;
-            }
-            while (gbytes > 1024)
-            {
-                tbytes++;
-                gbytes -= 1024;
-            }
-            while (tbytes > 1024)
-            {
-                pbytes++;
-                tbytes -= 1024;
-            }
         }
 
         /// <summary>
@@ -195,55 +163,59 @@ namespace socks5
         /// <returns></returns>
         public override string ToString()
         {
-            if (pbytes > 0)
-            {
-                double ret = (double)pbytes + ((double)((double)tbytes / 1024));
-                string s = ret.ToString();
-                if (s.Length > 6)
-                    s = s.Substring(0, 6);
-                return s + " Pb";
-            }
-            else if (tbytes > 0)
-            {
-                double ret = (double)tbytes + ((double)((double)gbytes / 1024));
+            var curtotal = totalbytes;
 
-                string s = ret.ToString();
-                if (s.Length > 6)
-                    s = s.Substring(0, 6);
+            var pbyte = curtotal / (1024L * 1024 * 1024 * 1024 * 1024);
+            curtotal %= (1024L * 1024 * 1024 * 1024 * 1024);
+            var tbyte = curtotal / (1024L * 1024 * 1024 * 1024);
+            curtotal %= (1024L * 1024 * 1024 * 1024);
+            var gbyte = curtotal / (1024 * 1024 * 1024);
+            curtotal %= (1024 * 1024 * 1024);
+            var mbyte = curtotal / (1024 * 1024);
+            curtotal %= (1024 * 1024);
+            var kbyte = curtotal / 1024;
+            var nbyte = curtotal % 1024;
+
+            if (pbyte > 0)
+            {
+                double ret = (double)pbyte + ((double)((double)tbyte / 1024));
+                string s = ret.ToString("#0.000");
+
+                return s + " PB";
+            }
+            else if (tbyte > 0)
+            {
+                double ret = (double)tbyte + ((double)((double)gbyte / 1024));
+                string s = ret.ToString("#0.000");
+
                 return s + " TB";
             }
-            else if (gbytes > 0)
+            else if (gbyte > 0)
             {
-                double ret = (double)gbytes + ((double)((double)mbytes / 1024));
-                string s = ret.ToString();
-                if (s.Length > 6)
-                    s = s.Substring(0, 6);
+                double ret = (double)gbyte + ((double)((double)mbyte / 1024));
+                string s = ret.ToString("#0.000");
+
                 return s + " GB";
             }
-            else if (mbytes > 0)
+            else if (mbyte > 0)
             {
-                double ret = (double)mbytes + ((double)((double)kbytes / 1024));
+                double ret = (double)mbyte + ((double)((double)kbyte / 1024));
+                string s = ret.ToString("#0.000");
 
-                string s = ret.ToString();
-                if (s.Length > 6)
-                    s = s.Substring(0, 6);
                 return s + " MB";
             }
-            else if (kbytes > 0)
+            else if (kbyte > 0)
             {
-                double ret = (double)kbytes + ((double)((double)bytes / 1024));
+                double ret = (double)kbyte + ((double)((double)byte / 1024));
+                string s = ret.ToString("#0.000");
 
-                string s = ret.ToString();
-                if (s.Length > 6)
-                    s = s.Substring(0, 6);
                 return s + " KB";
             }
             else
             {
-                string s = bytes.ToString();
-                if (s.Length > 6)
-                    s = s.Substring(0, 6);
-                return s + " b";
+                string s = nbyte.ToString("#0.000");
+
+                return s + " B";
             }
         }
     }

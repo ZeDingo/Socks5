@@ -59,6 +59,9 @@ namespace socks5.TCP
         {
             get { return sc.GetPerSecond(); }
         }
+        public string TotoalSent { get { return sc.ToString(); } }
+
+        public string TotalReceived { get { return rc.ToString(); } }
     }
     public enum PacketType
     {
