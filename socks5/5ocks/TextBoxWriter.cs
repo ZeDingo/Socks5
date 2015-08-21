@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using System.Windows.Controls;
 using System.Windows.Shapes;
 
-namespace _5ocks
+namespace Socona.Fiveocks
 {
     class TextBoxWriter:TextWriter
     {

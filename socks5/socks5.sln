@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.30723.0
+VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "socks5", "socks5\socks5.csproj", "{B1A31708-7AC8-44C9-BBB3-999BEBE1FA5B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Socks5Lib", "socks5\Socks5Lib.csproj", "{B1A31708-7AC8-44C9-BBB3-999BEBE1FA5B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Socks5Test", "Socks5Test\Socks5Test.csproj", "{838E506D-EFE1-4B1E-B7F3-2302FAAD58A2}"
 EndProject

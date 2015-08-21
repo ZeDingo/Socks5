@@ -25,7 +25,7 @@ namespace socks5
 
         public SocksTunnel(SocksClient p, SocksRequest req, SocksRequest req1, int packetSize, int timeout)
         {
-            RemoteClient = new Client(new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), PacketSize);
+            RemoteClient = new Client(new Socket(SocketType.Stream, ProtocolType.Tcp), PacketSize);
             Client = p;
             Req = req;
             ModifiedReq = req1;
@@ -37,10 +37,8 @@ namespace socks5
 
         public void Open()
         {
-            if (ModifiedReq.Address == null || ModifiedReq.Port <= -1) { Client.Client.Disconnect(); return; }
-//#if DEBUG
-//            Console.WriteLine("{0}:{1}", ModifiedReq.Address, ModifiedReq.Port);
-//#endif
+            if (ModifiedReq.Address == null || ModifiedReq.Port <= -1 || ModifiedReq.IP == null) { Client.Client.Disconnect(); return; }
+
             Console.WriteLine("{0}:{1}({2})", ModifiedReq.Address, ModifiedReq.Port, ModifiedReq.IP);
 
             foreach (ConnectSocketOverrideHandler conn in PluginLoader.LoadPlugin(typeof(ConnectSocketOverrideHandler)))
@@ -71,7 +69,7 @@ namespace socks5
             }
             var socketArgs = new SocketAsyncEventArgs { RemoteEndPoint = new IPEndPoint(ModifiedReq.IP, ModifiedReq.Port) };
             socketArgs.Completed += socketArgs_Completed;
-            RemoteClient.Sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            RemoteClient.Sock = new Socket(SocketType.Stream, ProtocolType.Tcp);
             RemoteClient.Sock.ReceiveTimeout = 10000;
             RemoteClient.Sock.SendTimeout = 10000;
 

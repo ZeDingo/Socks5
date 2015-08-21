@@ -46,9 +46,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\socks5\socks5.csproj">
+    <ProjectReference Include="..\socks5\Socks5Lib.csproj">
       <Project>{b1a31708-7ac8-44c9-bbb3-999bebe1fa5b}</Project>
-      <Name>socks5</Name>
+      <Name>Socks5Lib</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

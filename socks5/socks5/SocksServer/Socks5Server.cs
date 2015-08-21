@@ -74,7 +74,7 @@ namespace socks5
         void _server_onClientConnected(object sender, ClientEventArgs e)
         {
             //Console.WriteLine("Client connected.");
-            Console.WriteLine("Client @" + e.Client.Sock.LocalEndPoint);
+            Console.WriteLine("New Client :");
             //call plugins related to ClientConnectedHandler.
             foreach (ClientConnectedHandler cch in PluginLoader.LoadPlugin(typeof(ClientConnectedHandler)))
             {
@@ -92,13 +92,17 @@ namespace socks5
                     {
                     }
                 }
+                
             }
             SocksClient client = new SocksClient(e.Client);
             e.Client.onDataReceived += Client_onDataReceived;
             e.Client.onDataSent += Client_onDataSent;
             client.onClientDisconnected += client_onClientDisconnected;
             Clients.Add(client);
-            client.Begin(this.PacketSize, this.Timeout);
+            ThreadPool.QueueUserWorkItem((t) =>
+            {
+                client.Begin(this.PacketSize, this.Timeout);
+            });
         }
 
         void client_onClientDisconnected(object sender, SocksClientEventArgs e)
