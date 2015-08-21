@@ -22,6 +22,11 @@ namespace socks5
 
         private bool started;
 
+        public event EventHandler OnClientConnected;
+        public event EventHandler OnClientDisconnected;
+
+        public event EventHandler OnDebugEvent;
+
         public Socks5Server(IPAddress ip, int port)
         {
             Timeout = 5000;
@@ -69,6 +74,7 @@ namespace socks5
         void _server_onClientConnected(object sender, ClientEventArgs e)
         {
             //Console.WriteLine("Client connected.");
+            Console.WriteLine("Client @" + e.Client.Sock.LocalEndPoint);
             //call plugins related to ClientConnectedHandler.
             foreach (ClientConnectedHandler cch in PluginLoader.LoadPlugin(typeof(ClientConnectedHandler)))
             {

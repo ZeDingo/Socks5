@@ -39,7 +39,7 @@ namespace socks5.Socks5Client
                 try
                 {
                     foreach (IPAddress p in Dns.GetHostAddresses(ipOrDomain))
-                        if (p.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                        if (p.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork || p.AddressFamily == AddressFamily.InterNetworkV6)
                         {
                             DoSocks(p, port, dest, destport, username, password);
                             return;
@@ -70,12 +70,15 @@ namespace socks5.Socks5Client
             }
             Dest = dest;
             Destport = destport;
+            this.enc = new SocksEncryption();
         }
 
         public void ConnectAsync()
         {
             //
-            p = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            //p = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            p = new Socket(SocketType.Stream, ProtocolType.Tcp);
+
             Client = new Client(p, 2048);
             Client.onClientDisconnected += Client_onClientDisconnected;
             Client.Sock.BeginConnect(new IPEndPoint(ipAddress, Port), new AsyncCallback(onConnected), Client);
@@ -246,7 +249,9 @@ namespace socks5.Socks5Client
         {
             try
             {
-                p = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                //p = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                p = new Socket(SocketType.Stream, ProtocolType.Tcp);
+
                 Client = new Client(p, 65535);
                 Client.Sock.Connect(new IPEndPoint(ipAddress, Port));
                 //try the greeting.
@@ -285,7 +290,10 @@ namespace socks5.Socks5Client
                 this.OnConnected(this, new Socks5ClientArgs(this, SocksError.Failure));
         }
 
-
+        public void Disconnect()
+        {
+            Client.Disconnect();
+        }
         public bool Connected
         {
             get { return Client.Sock.Connected; }

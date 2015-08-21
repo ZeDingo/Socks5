@@ -38,9 +38,11 @@ namespace socks5
         public void Open()
         {
             if (ModifiedReq.Address == null || ModifiedReq.Port <= -1) { Client.Client.Disconnect(); return; }
-#if DEBUG
-            Console.WriteLine("{0}:{1}", ModifiedReq.Address, ModifiedReq.Port);
-#endif
+//#if DEBUG
+//            Console.WriteLine("{0}:{1}", ModifiedReq.Address, ModifiedReq.Port);
+//#endif
+            Console.WriteLine("{0}:{1}({2})", ModifiedReq.Address, ModifiedReq.Port, ModifiedReq.IP);
+
             foreach (ConnectSocketOverrideHandler conn in PluginLoader.LoadPlugin(typeof(ConnectSocketOverrideHandler)))
             if(conn.Enabled)
             {
@@ -67,9 +69,12 @@ namespace socks5
                 Client.Client.Disconnect();
                 return;
             }
-            socketArgs = new SocketAsyncEventArgs { RemoteEndPoint = new IPEndPoint(ModifiedReq.IP, ModifiedReq.Port) };
+            var socketArgs = new SocketAsyncEventArgs { RemoteEndPoint = new IPEndPoint(ModifiedReq.IP, ModifiedReq.Port) };
             socketArgs.Completed += socketArgs_Completed;
             RemoteClient.Sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            RemoteClient.Sock.ReceiveTimeout = 10000;
+            RemoteClient.Sock.SendTimeout = 10000;
+
             if (!RemoteClient.Sock.ConnectAsync(socketArgs))
                 ConnectHandler(socketArgs);
         }
@@ -140,11 +145,11 @@ namespace socks5
         void RemoteClient_onClientDisconnected(object sender, ClientEventArgs e)
         {
             
-#if DEBUG
-            Console.WriteLine("Remote DC'd");
-#endif
             if (disconnected) return;
-            //Console.WriteLine("Remote DC'd");
+
+            Console.WriteLine("\tRemote DC'd @" + RemoteClient.Sock.RemoteEndPoint);
+
+            
             disconnected = true;
             Client.Client.Disconnect();
             Client.Client.onDataReceived -= Client_onDataReceived;
